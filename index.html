@@ -1,1 +1,89 @@
 
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827">
+<title>AutoHunter — поиск выгодных автомобилей</title>
+<style>
+:root{--bg:#0b1220;--panel:#121d30;--panel2:#19263b;--text:#edf3ff;--muted:#9aabc4;--accent:#65d6a5;--line:#263650;--warn:#ffd166}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,sans-serif}
+header{padding:22px 16px 16px;background:linear-gradient(135deg,#14243a,#0b1220);border-bottom:1px solid var(--line)}
+.wrap{max-width:980px;margin:auto}h1{margin:0;font-size:27px;letter-spacing:.2px}header p{margin:6px 0 0;color:var(--muted)}
+nav{display:flex;gap:8px;overflow:auto;padding:12px 14px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0b1220;z-index:2}
+button,.tab{border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:12px;padding:10px 13px;font:inherit;cursor:pointer;white-space:nowrap}
+button.primary,.tab.active{background:var(--accent);color:#082016;border-color:var(--accent);font-weight:700}
+main{max-width:980px;margin:auto;padding:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:14px}
+h2{font-size:19px;margin:0 0 12px}.muted{color:var(--muted)}.notice{font-size:13px;color:var(--warn);line-height:1.45}
+.filters{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+label{display:block;color:var(--muted);font-size:12px;margin-bottom:5px}
+input,select{width:100%;background:#0b1423;border:1px solid var(--line);color:var(--text);padding:11px;border-radius:10px;font:inherit}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(245px,1fr));gap:12px}
+.car{background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px}
+.car h3{margin:0 0 5px;font-size:17px}.price{font-size:22px;font-weight:800;margin:8px 0}.meta{font-size:13px;color:var(--muted);line-height:1.6}
+.tag{display:inline-block;background:#173b32;color:var(--accent);padding:4px 8px;border-radius:20px;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.actions button{padding:8px 10px;font-size:13px}
+.hidden{display:none!important}.empty{padding:20px;text-align:center;color:var(--muted)}
+.stat{display:flex;gap:8px;flex-wrap:wrap}.stat span{background:var(--panel2);padding:9px 12px;border-radius:10px}
+canvas{width:100%;height:190px;background:#0b1423;border-radius:10px}
+footer{max-width:980px;margin:auto;padding:0 16px 30px;color:var(--muted);font-size:12px}
+@media(max-width:520px){.filters{grid-template-columns:1fr}h1{font-size:24px}main{padding:12px}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><h1>🚘 AutoHunter</h1><p>Поиск автомобилей и отслеживание цен — локальная версия</p></div></header>
+<nav class="wrap">
+<button class="tab active" data-page="search">Поиск</button>
+<button class="tab" data-page="favorites">Избранное</button>
+<button class="tab" data-page="game">Угадай цену</button>
+<button class="tab" data-page="about">О проекте</button>
+</nav>
+<main>
+<section id="search">
+<div class="panel">
+<h2>Найти автомобиль</h2>
+<div class="filters">
+<div><label for="city">Город</label><input id="city" placeholder="Например, Казань"></div>
+<div><label for="query">Марка или модель</label><input id="query" placeholder="Toyota Camry"></div>
+<div><label for="maxPrice">Цена до, ₽</label><input id="maxPrice" type="number" placeholder="2000000"></div>
+<div><label for="sort">Сортировка</label><select id="sort"><option value="cheap">Сначала дешевле</option><option value="discount">Сначала выгоднее</option></select></div>
+</div>
+<p class="notice">Демо-объявления ниже — примеры интерфейса, не реальные предложения и не актуальные рыночные цены. Для реального поиска нужен разрешённый источник объявлений.</p>
+</div>
+<div class="stat"><span id="count">0 автомобилей</span><span>Избранное: <b id="favCount">0</b></span></div>
+<div id="cars" class="cards" style="margin-top:12px"></div>
+</section>
+<section id="favorites" class="hidden"><div class="panel"><h2>Избранные автомобили</h2><div id="favCars" class="cards"></div></div></section>
+<section id="game" class="hidden">
+<div class="panel"><h2>🎯 Угадай цену</h2><p class="muted">Выбери, сколько, по твоему мнению, стоит автомобиль в этом учебном примере.</p>
+<h3 id="gameCar"></h3><p class="muted" id="gameInfo"></p>
+<div class="filters"><div><label for="guess">Твоя оценка, ₽</label><input id="guess" type="number" placeholder="Например, 1500000"></div><div style="align-self:end"><button class="primary" id="guessBtn">Проверить</button></div></div><p id="gameResult" aria-live="polite"></p><button id="nextGame">Следующий автомобиль</button>
+</div></section>
+<section id="about" class="hidden"><div class="panel"><h2>Что умеет эта версия</h2><ul><li>Фильтровать демонстрационные объявления по городу, модели и цене.</li><li>Сохранять избранное на этом устройстве.</li><li>Показывать пример динамики цены.</li><li>Составлять шаблон сообщения продавцу.</li><li>Играть в «Угадай цену».</li></ul><p class="notice">Сайт работает локально в браузере. Он не подключён к Auto.ru, Avito или Drom, не получает свежие объявления и не отправляет автоматические уведомления.</p></div></section>
+</main>
+<footer>AutoHunter • Данные избранного хранятся только в браузере этого устройства. Очистка данных сайта может удалить сохранённое.</footer>
+<script>
+const cars=[
+{id:1,make:"Toyota Camry",year:2018,price:1850000,city:"Казань",km:112000,tag:"Пример объявления",history:[2050000,1990000,1920000,1850000]},
+{id:2,make:"Kia Rio",year:2020,price:1120000,city:"Москва",km:68000,tag:"Пример объявления",history:[1190000,1170000,1150000,1120000]},
+{id:3,make:"Volkswagen Polo",year:2019,price:980000,city:"Санкт-Петербург",km:94000,tag:"Пример объявления",history:[1030000,1010000,995000,980000]},
+{id:4,make:"Hyundai Solaris",year:2021,price:1290000,city:"Екатеринбург",km:54000,tag:"Пример объявления",history:[1350000,1330000,1310000,1290000]},
+{id:5,make:"Skoda Octavia",year:2017,price:1450000,city:"Казань",km:126000,tag:"Пример объявления",history:[1520000,1500000,1470000,1450000]}
+];
+const money=n=>new Intl.NumberFormat("ru-RU").format(n)+" ₽";
+const favorites=new Set(JSON.parse(localStorage.getItem("ah_favs")||"[]"));
+function save(){localStorage.setItem("ah_favs",JSON.stringify([...favorites]));}
+function card(c){return `<article class="car"><span class="tag">${c.tag}</span><h3>${c.make} • ${c.year}</h3><div class="price">${money(c.price)}</div><div class="meta">📍 ${c.city}<br>Пробег: ${c.km.toLocaleString("ru-RU")} км</div><div class="actions"><button onclick="toggleFav(${c.id})">${favorites.has(c.id)?"★ В избранном":"☆ В избранное"}</button><button onclick="showGraph(${c.id})">График цены</button><button onclick="sellerText(${c.id})">Написать продавцу</button></div><div id="graph-${c.id}" class="hidden"><p class="muted">Условная история цены (пример)</p><canvas width="600" height="190"></canvas></div></article>`}
+function render(){let q=document.querySelector("#query").value.toLowerCase(),city=document.querySelector("#city").value.toLowerCase(),max=Number(document.querySelector("#maxPrice").value)||Infinity,sort=document.querySelector("#sort").value;let list=cars.filter(c=>(c.make.toLowerCase().includes(q))&&(!city||c.city.toLowerCase().includes(city))&&c.price<=max);if(sort==="cheap")list.sort((a,b)=>a.price-b.price);else list.sort((a,b)=>(a.history[0]-a.price)/a.history[0]-(b.history[0]-b.price)/b.history[0]).reverse();document.querySelector("#cars").innerHTML=list.length?list.map(card).join(""):'<div class="empty">Ничего не найдено. Измени фильтры.</div>';document.querySelector("#count").textContent=list.length+" автомобилей";document.querySelector("#favCount").textContent=favorites.size;document.querySelector("#favCars").innerHTML=[...favorites].map(id=>cars.find(c=>c.id===id)).filter(Boolean).map(card).join("")||'<div class="empty">Пока нет избранных автомобилей.</div>'}
+function toggleFav(id){favorites.has(id)?favorites.delete(id):favorites.add(id);save();render()}
+function showGraph(id){let el=document.querySelector("#graph-"+id);el.classList.toggle("hidden");if(!el.classList.contains("hidden")){let c=cars.find(x=>x.id===id),cv=el.querySelector("canvas"),ctx=cv.getContext("2d"),vals=c.history;ctx.clearRect(0,0,600,190);ctx.strokeStyle="#65d6a5";ctx.lineWidth=4;ctx.beginPath();vals.forEach((v,i)=>{let x=35+i*175,y=155-(v-Math.min(...vals)+10000)/(Math.max(...vals)-Math.min(...vals)+20000)*120;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.fillStyle="#edf3ff";ctx.font="13px sans-serif";vals.forEach((v,i)=>ctx.fillText(money(v),10+i*145,178))}}
+function sellerText(id){let c=cars.find(x=>x.id===id),msg=`Здравствуйте! Подскажите, пожалуйста, автомобиль ${c.make}, ${c.year}, ещё продаётся? Есть ли история обслуживания и ограничения? Можно ли проверить автомобиль перед покупкой?`;if(navigator.clipboard?.writeText){navigator.clipboard.writeText(msg).then(()=>alert("Шаблон сообщения скопирован."),()=>prompt("Скопируй сообщение:",msg))}else prompt("Скопируй сообщение:",msg)}
+document.querySelectorAll("input,select").forEach(x=>x.addEventListener("input",render));
+document.querySelectorAll(".tab").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x===b));["search","favorites","game","about"].forEach(id=>document.getElementById(id).classList.toggle("hidden",id!==b.dataset.page));if(b.dataset.page==="favorites")render()}));
+let gameIndex=0;function game(){let c=cars[gameIndex%cars.length];document.querySelector("#gameCar").textContent=c.make+" • "+c.year;document.querySelector("#gameInfo").textContent="Город: "+c.city+" · пробег "+c.km.toLocaleString("ru-RU")+" км";document.querySelector("#guess").value="";document.querySelector("#gameResult").textContent=""}
+document.querySelector("#guessBtn").onclick=()=>{let n=Number(document.querySelector("#guess").value),c=cars[gameIndex%cars.length];document.querySelector("#gameResult").textContent=!n?"Введи цену числом.":"В учебном примере цена — "+money(c.price)+". Разница: "+money(Math.abs(n-c.price))+".";};
+document.querySelector("#nextGame").onclick=()=>{gameIndex++;game()};render();game();
+</script>
+</body></html>
